@@ -1,3 +1,4 @@
+'''This is the file containing all the code needed to have a simulated version of blackjack'''
 import random
 
 
@@ -9,7 +10,7 @@ import random
 # numbers:  2-10
 
 class deck():
-'''This is the class that handles simulation for a deck of cards'''
+    '''This is the class that handles simulation for a deck of cards'''
 
     def __init__(self, numDecks, reshufflePercent):
         self.cards = []
@@ -56,7 +57,7 @@ class deck():
         else:
             return self.cards[-1]
 
-   def peekDeck(self):
+    def peekDeck(self):
         '''returns a copy of the list in the deck'''
         return self.cards[:]
 
@@ -89,7 +90,7 @@ class game():
         return self.deck.peekDeck()
 
     def __endHand__(self):
-
+        pass
 
     def hit(self):
         '''Deals another card and returns (newCard, total) If total >= 21, game is over and reward will be not none'''
