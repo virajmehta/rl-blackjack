@@ -77,7 +77,6 @@ class Oracle():
         
     def evaluateMoves(self):
         moves = self.game.getPossibleActions()
-        if self.game.isBlackjack: return None
         moveWinnings = []
         if self.game.stand in moves:
             moveWinnings.append((self.game.stand, self.standValue()))
@@ -118,7 +117,7 @@ class Oracle():
 
     def getDealerTotal(self, newIndex, deck):
         dealerTotal = self.game.dealerTotal
-        dealerHand = [x for x in self.game.dealerHand]
+        dealerHand = self.game.dealerHand[:]
         while dealerTotal < 17:
             newCard = deck[newIndex]
             dealerTotal += self.game.cardValues[newCard]
