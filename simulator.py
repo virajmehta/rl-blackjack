@@ -61,13 +61,6 @@ class Deck():
         return self.cards[:]
 
 
-
-
-
-
-
-
-
 class Game():
     '''A game of blackjack. You call startHand to start and then getReward in between every action to see what the reward for the state would have been and whether the game is over. You can use getPossibleActions to figure out what actions are possible for you at any given state so you don't need the blackjack logic on the client end at all. If an impossible action is chosen, a function will return None and not do anything'''
     def __init__(self, numDecks=1):
