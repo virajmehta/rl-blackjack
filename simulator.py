@@ -38,9 +38,8 @@ class Deck():
 
 
     def drawCard(self):
-        '''draws a card'''
-        self.cards.pop()
-        return card
+        '''Draws a card'''
+        return self.cards.pop()
 
     def endHand(self):
         '''Hand is over. Check if need to shuffle. Return true if shuffled. False not'''
@@ -51,14 +50,14 @@ class Deck():
             return True
 
     def peek(self):
-        '''get the value of the next card in the deck. Useful for implementing a blackjack oracle'''
+        '''Get the value of the next card in the deck. Useful for implementing a blackjack oracle'''
         if len(self.cards) == 0:
             return -1 # on error
         else:
             return self.cards[-1]
 
     def peekDeck(self):
-        '''returns a copy of the list in the deck'''
+        '''Returns a copy of the list in the deck'''
         return self.cards[:]
 
 
@@ -70,7 +69,7 @@ class Deck():
 
 
 class Game():
-    '''a game of blackjack. You call startHand to start and then getReward in between every action to see what the reward for the state would have been and whether the game is over. You can use getPossibleActions to figure out what actions are possible for you at any given state so you don't need the blackjack logic on the client end at all. If an impossible action is chosen, a function will return None and not do anything'''
+    '''A game of blackjack. You call startHand to start and then getReward in between every action to see what the reward for the state would have been and whether the game is over. You can use getPossibleActions to figure out what actions are possible for you at any given state so you don't need the blackjack logic on the client end at all. If an impossible action is chosen, a function will return None and not do anything'''
     def __init__(self, numDecks=1):
         self.numDecks = numDecks
         self.deck = Deck(self.numDecks, 0.25)
@@ -90,12 +89,16 @@ class Game():
 
     def startHand(self, bet):
         '''Deals out the cards for a hand and returns ([dealerCard2], [playerCard1, playerCard2], dealerTotal, playerTotal)'''
+        self.playerHand = []
+        self.dealerHand = []
+        self.isBlackjack = False
+        self.isOver = False
         self.bet = bet
         for _ in range(2):
-            self.playerHand.append(deck.drawCard())
-            self.dealerHand.append(deck.drawCard())
-        self.playerTotal = sum(self.cardValues[card] for card in playerHand)
-        self.dealerTotal = sum(self.cardValues[card] for card in dealerHand)
+            self.playerHand.append(self.deck.drawCard())
+            self.dealerHand.append(self.deck.drawCard())
+        self.playerTotal = sum(self.cardValues[card] for card in self.playerHand)
+        self.dealerTotal = sum(self.cardValues[card] for card in self.dealerHand)
         if self.playerTotal == 21 and self.dealerTotal != 21:
             self.isBlackjack = True
             self.isOver = True
@@ -103,19 +106,23 @@ class Game():
         
 
     def getReward(self):
-        '''Call this whenever you're curious about the reward of a game state. If the hand is over, returns a value of the reward of that hand and the cards in the final dealer hand as (reward, [dealerCard1, dealerCard2, ...]). If the hand isn't over, returns None'''
+        '''Call this whenever you're curious about the reward of a game state. If the hand is over, returns a value of the reward of that hand and the cards in the final dealer hand as (result, reward, [dealerCard1, dealerCard2, ...]). If the hand isn't over, returns None'''
         if not self.isOver:
             return None
         if self.isBlackjack:
-            return (1.5 * self.bet, self.dealerHand[:])
+            return ('BLACKJACK!', 1.5 * self.bet)
         if self.playerTotal > 21:
-            return (-1 * bet, self.dealerHand[:])
+            return ('PLAYER BUSTS!', -1 * self.bet)
         if self.dealerTotal > 21:
-            return (bet, self.dealerHand[:])
+            return ('DEALER BUSTS!', self.bet)
         if self.playerTotal > self.dealerTotal:
-            return (bet, self.dealerHand[:])
+            return ('PLAYER WINS!', self.bet)
+        if self.playerTotal == self.dealerTotal:
+            return ('PUSH!', 0)
+        if self.playerTotal < 0:
+            return ('PLAYER SURRENDERS!', -1 * self.bet)
         else:
-            return (-1 * bet, self.dealerHand[:])
+            return ('DEALER WINS!', -1 * self.bet)
 
     def getPossibleActions(self):
         '''Returns all the possible actions of the current state in the form of a list of function pointers'''
@@ -152,6 +159,7 @@ class Game():
 
     def hit(self):
         '''Deals another card and returns (newCard, total) If total >= 21, game is over and reward will be not none'''
+        print 'Action: HIT'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -169,10 +177,12 @@ class Game():
 
     def stand(self):
         '''Ends hand as is and does the dealer play. Call getReward to see what happens after. This function returns None'''
+        print 'Action: STAND'
         self.__endHand__()
 
     def double(self):
-        '''same as hit but doubles bet and lets the dealer play. Returns (newCard , total). Call getReward to see what happened'''
+        '''Same as hit but doubles bet and lets the dealer play. Returns (newCard , total). Call getReward to see what happened'''
+        print 'Action: DOUBLE DOWN'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -187,9 +197,10 @@ class Game():
         return (newCard, self.playerTotal)
 
     def surrender(self):
-        '''ends game at beginning and returns None. Call getReward to see what happens after.'''
-        self.bet /= 2
-        self.playerTotal = 22
+        '''Ends game at beginning and returns None. Call getReward to see what happens after.'''
+        print 'Action: SURRENDER\n'
+        self.bet /= 2.0
+        self.playerTotal = -1
         self.__endHand__(False)
         return None
 
