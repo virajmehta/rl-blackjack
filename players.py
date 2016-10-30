@@ -75,7 +75,6 @@ class Oracle():
             print 'Hand: %s' % self.hand
             print 'Total: %s' % self.total
             action = self.evaluateMoves()
-        
         if action != None:
             newState = action()
             if newState != None: 
