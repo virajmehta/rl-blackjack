@@ -1,4 +1,6 @@
-'''This file plays the blackjack game. The user inputs what type of game play they want to see.'''
+'''
+This file plays the blackjack game. The user inputs what type of game play they want to see.
+'''
 from players import Player
 
 playerTypes = ['Baseline', 'Oracle']

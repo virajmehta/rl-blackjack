@@ -1,16 +1,19 @@
-'''This is the file containing all the code needed to have a simulated version of blackjack.
+'''
+This is the file containing all the code needed to have a simulated version of blackjack.
 
 Canonical encoding of cards to constants:
 Ace:      A, a
 King:     K
 Queen:    Q
 Jack:     J
-numbers:  2-10'''
+numbers:  2-10
+'''
 import random
 
 class Deck():
-    '''Handles simulation for a deck of cards.'''
-
+    '''
+    Handles simulation for a deck of cards.
+    '''
     def __init__(self, numDecks, reshufflePercent):
         self.cards = []
         self.numDecks = numDecks
@@ -18,7 +21,9 @@ class Deck():
         self.shuffle()
 
     def shuffle(self):
-        '''Shuffles the deck and sets a new cut card.'''
+        '''
+        Shuffles the deck and sets a new cut card.
+        '''
         self.cut = int(4 * self.numDecks * self.reshufflePercent * random.gauss(1, 0.2))
         self.cards = []
         for i in range(13):
@@ -37,11 +42,15 @@ class Deck():
 
 
     def drawCard(self):
-        '''Draws a card.'''
+        '''
+        Draws a card.
+        '''
         return self.cards.pop()
 
     def endHand(self):
-        '''Hand is over. Check if need to shuffle. Return true if shuffled. False if not.'''
+        '''
+        Hand is over. Check if need to shuffle. Return true if shuffled. False if not.
+        '''
         if len(self.cards) < self.cut:
             return False
         else:
@@ -49,19 +58,29 @@ class Deck():
             return True
 
     def peek(self):
-        '''Get the value of the next card in the deck. Useful for implementing a blackjack oracle.'''
+        '''
+        Get the value of the next card in the deck. Useful for implementing a blackjack oracle.
+        '''
         if len(self.cards) == 0:
             return -1 # on error
         else:
             return self.cards[-1]
 
     def peekDeck(self):
-        '''Returns a copy of the list in the deck.'''
+        '''
+        Returns a copy of the list in the deck.
+        '''
         return self.cards[:]
 
 
 class Game():
-    '''A game of blackjack. You call startHand to start and then getReward in between every action to see what the reward for the state would have been and whether the game is over. You can use getPossibleActions to figure out what actions are possible for you at any given state so you don't need the blackjack logic on the client end at all. If an impossible action is chosen, a function will return None and not do anything.'''
+    '''
+    A game of blackjack. You call startHand to start and then getReward in between every action 
+    to see what the reward for the state would have been and whether the game is over. You can use
+    getPossibleActions to figure out what actions are possible for you at any given state so you 
+    don't need the blackjack logic on the client end at all. If an impossible action is chosen, 
+    a function will return None and not do anything.
+    '''
     def __init__(self, numDecks=1):
         self.numDecks = numDecks
         self.deck = Deck(self.numDecks, 0.25)
@@ -80,7 +99,9 @@ class Game():
         self.isOver = False
 
     def startHand(self, bet):
-        '''Deals out the cards for a hand and returns ([playerCard1, playerCard2], playerTotal).'''
+        '''
+        Deals out the cards for a hand and returns ([playerCard1, playerCard2], playerTotal).
+        '''
         self.playerHand = []
         self.dealerHand = []
         self.isBlackjack = False
@@ -98,7 +119,10 @@ class Game():
         
 
     def getReward(self):
-        '''Call this whenever you're curious about the reward of a game state. If the hand is over, returns a value of the reward of that hand and the cards in the final dealer hand as (result, reward).'''
+        '''
+        Call this whenever you're curious about the reward of a game state. If the hand is over,
+        returns a value of the reward of that hand and the cards in the final dealer hand as (result, reward).
+        '''
         if self.isBlackjack:
             return ('BLACKJACK!', 1.5 * self.bet)
         if self.playerTotal > 21:
@@ -115,7 +139,9 @@ class Game():
             return ('DEALER WINS!', -1 * self.bet)
 
     def getPossibleActions(self):
-        '''Returns all the possible actions of the current state in the form of a list of function pointers.'''
+        '''
+        Returns all the possible actions of the current state in the form of a list of function pointers.
+        '''
         moves = [self.stand, self.hit]
         if self.isOver:
             return []
@@ -125,15 +151,22 @@ class Game():
         return moves
 
     def getNextCard(self):
-        '''Returns the next card in the deck.'''
+        '''
+        Returns the next card in the deck.
+        '''
         return self.deck.peek()
 
     def getDeck(self):
-        '''Returns a list containing all of the card values in the deck.'''
+        '''
+        Returns a list containing all of the card values in the deck.
+        '''
         return self.deck.peekDeck()
 
     def __endHand__(self, dealerDraw=True):
-        '''Plays out dealer's hand after player has finished turn. Calls endHand() from Deck to see if cards need to be reshuffled.'''
+        '''
+        Plays out dealer's hand after player has finished turn. Calls endHand() from 
+        Deck to see if cards need to be reshuffled.
+        '''
         if dealerDraw:
             while self.dealerTotal < 17:
                 newCard = self.deck.drawCard()
@@ -149,13 +182,19 @@ class Game():
         self.isOver = True
 
     def stand(self):
-        '''Ends hand as is and does the dealer play. Call getReward() to see what happens after. This function returns None.'''
-        print 'Action: STAND'
+        '''
+        Ends hand as is and does the dealer play. Call getReward() to see what 
+        happens after. This function returns None.
+        '''
+        #print 'Action: STAND'
         self.__endHand__()
 
     def hit(self):
-        '''Deals another card and returns (newCard, total) If total >= 21, game is over and reward will be not none.'''
-        print 'Action: HIT'
+        '''
+        Deals another card and returns (newCard, total) If total >= 21, 
+        game is over and reward will be not None.
+        '''
+        #print 'Action: HIT'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -173,8 +212,11 @@ class Game():
 
     
     def double(self):
-        '''Same as hit but doubles bet and lets the dealer play. Returns (newHand, newTotal). Call getReward() to see what happened.'''
-        print 'Action: DOUBLE DOWN'
+        '''
+        Same as hit but doubles bet and lets the dealer play. Returns (newHand, newTotal). 
+        Call getReward() to see what happened.
+        '''
+        #print 'Action: DOUBLE DOWN'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -189,8 +231,10 @@ class Game():
         return (self.playerHand, self.playerTotal)
 
     def surrender(self):
-        '''Ends game at beginning and returns None. Call getReward() to see what happens after.'''
-        print 'Action: SURRENDER\n'
+        '''
+        Ends game at beginning and returns None. Call getReward() to see what happens after.
+        '''
+        #print 'Action: SURRENDER\n'
         self.bet /= 2.0
         self.playerTotal = -1
         self.__endHand__(False)
