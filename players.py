@@ -24,11 +24,11 @@ class Player():
         '''
         Plays desired number of hands for given number of iterations.
         '''
-        for _ in range(1000000):
+        for _ in range(100):
             self.player.hand, self.player.total = self.game.startHand(1)
-            #print '%s\'s Turn!\n' % self.playerName
-            #print 'Hand: %s' % self.player.hand
-            #print 'Total: %s' % self.player.total
+            print '%s\'s Turn!\n' % self.playerName
+            print 'Hand: %s' % self.player.hand
+            print 'Total: %s' % self.player.total
             self.player.playHand()
             self.dealer.playHand()
             self.getWinnings()
@@ -40,11 +40,11 @@ class Player():
         Updates total winnings over the whole game.
         '''
         result = self.game.getReward()
-        #print '%s\n' % result[0]
-        #print 'Round Winnings: %s' % result[1]
+        print '%s\n' % result[0]
+        print 'Round Winnings: %s' % result[1]
         self.winnings += result[1]
-        #print 'Total Winnings: %s' % self.winnings
-        #print '--------------------'
+        print 'Total Winnings: %s' % self.winnings
+        print '--------------------'
 
 
 class Dealer():
@@ -59,27 +59,8 @@ class Dealer():
         '''
         Outputs dealer's final hand and total for the round.
         '''
-        pass
-        #print 'Dealer\'s Turn!\n'
-        #print 'Final Hand: %s' % self.game.dealerHand
-        #print 'Final Total: %s\n' % self.game.dealerTotal
-
-class Baseline():
-    '''
-    The baseline implementation. This player stands on every hand, regardless of the cards.
-    '''
-    def __init__(self, game):
-        self.game = game
-        self.hand = []
-        self.total = 0
-    
-    def playHand(self):
-        '''
-        Calls stand() from Game to end the hand. Outputs final hand and total for the round.
-        '''
-        self.game.stand()
-        #print 'Final Hand: %s' % self.hand
-        #print 'Final Total: %s\n' % self.total
+        print 'Final Hand: %s' % self.hand
+        print 'Final Total: %s\n' % self.total
  
 class Oracle():
     '''
@@ -98,17 +79,16 @@ class Oracle():
         action = self.evaluateMoves()
         while action == self.game.hit:
             self.hand, self.total = action()
-            #print 'Hand: %s' % self.hand
-            #print 'Total: %s' % self.total
+            print 'Hand: %s' % self.hand
+            print 'Total: %s' % self.total
             action = self.evaluateMoves()
         if action != None:
             newState = action()
             if newState != None: 
                 self.hand, self.total = newState
             if action != self.game.surrender:
-                pass
-                #print 'Final Hand: %s' % self.hand
-                #print 'Final Total: %s\n' % self.total
+                print 'Final Hand: %s' % self.hand
+                print 'Final Total: %s\n' % self.total
         
     def evaluateMoves(self):
         '''

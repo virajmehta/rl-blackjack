@@ -186,7 +186,7 @@ class Game():
         Ends hand as is and does the dealer play. Call getReward() to see what 
         happens after. This function returns None.
         '''
-        #print 'Action: STAND'
+        print 'Action: STAND'
         self.__endHand__()
 
     def hit(self):
@@ -194,7 +194,7 @@ class Game():
         Deals another card and returns (newCard, total) If total >= 21, 
         game is over and reward will be not None.
         '''
-        #print 'Action: HIT'
+        print 'Action: HIT'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -216,7 +216,7 @@ class Game():
         Same as hit but doubles bet and lets the dealer play. Returns (newHand, newTotal). 
         Call getReward() to see what happened.
         '''
-        #print 'Action: DOUBLE DOWN'
+        print 'Action: DOUBLE DOWN'
         newCard = self.deck.drawCard()
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
@@ -234,7 +234,7 @@ class Game():
         '''
         Ends game at beginning and returns None. Call getReward() to see what happens after.
         '''
-        #print 'Action: SURRENDER\n'
+        print 'Action: SURRENDER\n'
         self.bet /= 2.0
         self.playerTotal = -1
         self.__endHand__(False)
