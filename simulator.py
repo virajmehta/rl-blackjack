@@ -71,6 +71,11 @@ class Deck():
         Returns a copy of the list in the deck.
         '''
         return self.cards[:]
+    def getNumCards(self):
+        return len(self.cards)
+
+    def getNumDecks(self):
+        return self.numDecks
 
 
 class Game():
@@ -96,7 +101,7 @@ class Game():
         self.cardValues['A'] = 11
         self.cardValues['a'] = 1
         self.isBlackjack = False
-        self.isOver = False
+        self.isOver = True
 
     def startHand(self, bet):
         '''
@@ -115,7 +120,7 @@ class Game():
         if self.playerTotal == 21 and self.dealerTotal != 21:
             self.isBlackjack = True
             self.isOver = True
-        return (self.playerHand[:], self.playerTotal)
+        return (self.playerHand[:], self.playerTotal, self.dealerHand[1:], self.dealerTotal)
         
 
     def getReward(self):
@@ -123,6 +128,8 @@ class Game():
         Call this whenever you're curious about the reward of a game state. If the hand is over, 
         returns a value of the reward of that hand and the cards in the final dealer hand as (result, reward).
         '''
+        if not self.isOver:
+            return 0
         if self.isBlackjack:
             return ('BLACKJACK!', 1.5 * self.bet)
         if self.playerTotal > 21:
@@ -178,8 +185,8 @@ class Game():
                             self.dealerTotal -= 10
                             self.dealerHand[index] = 'a' 
                             break
-        self.deck.endHand()
         self.isOver = True
+        return self.deck.endHand()
 
     def stand(self):
         '''
