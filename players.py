@@ -38,10 +38,10 @@ class Player():
         Calls getReward() from Game to retrieve the outcome of the hand. 
         Updates total winnings over the whole game.
         '''
-        result = self.game.getReward()
-        print '%s\n' % result[0]
-        print 'Round Winnings: %s' % result[1]
-        self.winnings += result[1]
+        result, roundWinnings = self.game.getReward()
+        print '%s\n' % result
+        print 'Round Winnings: %s' % roundWinnings
+        self.winnings += roundWinnings
         print 'Total Winnings: %s' % self.winnings
         print '--------------------'
 
