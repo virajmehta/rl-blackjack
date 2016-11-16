@@ -207,3 +207,110 @@ class Oracle():
             return 0
         else:
             return -1 * self.game.bet
+
+
+class CardCountingRLPlayer(player):
+    def __init__(self, strat, algo):
+        super(CardCountingPlayer, self).__init__('cardCounter')
+        self.count = 0.0
+        self.algo = algo # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        if strat == 'Hi-Lo':
+            self.strat = self.hilo 
+        elif strat == 'Omega':
+            self.strat = self.omega
+        elif strat == 'Wong-Halves':
+            self.strat = self.wonghalf
+        else:
+            self.strat = None
+        self.numAces = self.game.deck.getNumDecks() * 4# not always used
+        '''here, self.strat is a utility function that returns the current count'''
+
+    def train(self, numiter):
+    ''' train an algorithm a number of iterations'''
+        batch_size = 100
+        total_reward = 0.0
+        for iter in xrange(numiter):
+            if iter % batch_size == 0:
+                print 'batch {}, avg reward {}'.format(iter / batch_size, total_reward / batch_size)
+                total_reward = 0.0
+
+            shuffled = False #check for shuffle
+            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
+                shuffled = True
+
+            countState = self.strat([], shuffled=True)
+            state = (countState, 0, 0)
+
+            #decide how to bet based on count
+            actions = ['big', 'small']
+            betlevel = self.algo.getAction(state, actions, 0)
+            bet = 1 if betlevel == 'small' else 10
+            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
+            
+            while len(actions) > 0:
+                actions = self.game.getPossibleActions()
+                countState = self.strat(playerHand + dealerCards)
+                state = (countState, playerHand, dealerCards)
+                reward = self.game.getReward()
+                total_reward += reward
+                action = self.algo.getAction(state, actions, reward)
+
+    def test(self, numiter): #work in progress, need to write algos and adjust greediness
+        reward = 0.0
+        for _ in xrange(numiter):
+            shuffled = False
+            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
+                shuffled = True
+            countState = self.strat([], shuffled=True)
+            state = (countState, 0, 0)
+            actions = ['big', 'small']
+            betlevel = self.algo.getAction(state, actions, 0)
+            bet = 1 if betlevel == 'small' else 10
+            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
+            while len(actions) > 0:
+                actions = self.game.getPossibleActions()
+                countState = self.strat(playerHand + dealerCards)
+                state = (countState, playerHand, dealerCards)
+                reward = self.game.getReward()
+                total_reward += reward
+                action = self.algo.getAction(state, actions, reward)
+        return reward / numiter
+        
+    def hilo(self, newCards, shuffled=False):
+        if shuffled:
+            self.count = 0.0
+            return self.count
+        countValues = {2:1, 3:1, 4:1, 5:1, 6:1, 7:0, 8:0, 9:0, 10:-1, 'J':-1, 'Q':-1, 'K':-1, 'A':-1, 'a':-1}
+        for card in newCards:
+            self.count += countValues[card]
+        trueCount = self.count * self.game.deck.getNumCards() / 52.0
+        return trueCount
+
+    def omega(self, newCards, shuffled=False):
+        if shuffled:
+            self.count = 0.0
+            self.numAces = self.game.deck.getNumDecks() * 4
+            return (self.count, self.numAces)
+        countValues = {2:1, 3:1, 4:2, 5:2, 6:2, 7:1, 8:0, 9:-1, 10:-2, 'J':-2, 'Q':-2, 'K':-2, 'A':0, 'a':0}
+        for card in newCards:
+            if card == 'a' or card == 'A':
+                self.numAces -= 1
+            self.count += countValues[card]
+        trueCount = self.count * self.game.deck.getNumCards() / 52.0
+        return (trueCount, self.numAces)
+
+
+
+    def wonghalf(self, newCards, shuffled=False):
+        if shuffled:
+            self.count = 0.0
+            self.numAces = self.game.deck.getNumDecks() * 4
+            return self.count
+        countValues = {2:0.5,3:1.0,4:1.0,5:1.5,6:1.0,7:0.5,8:0,9:-.5,10:-1,'J':-1,'Q':-1,'K':-1,'A':-1,'a':-1}
+        for card in newCards:
+            self.count += countValues[card]
+        trueCount = self.count * self.game.deck.getNumCards() / 52.0
+        return (trueCount, self.numAces)
+
+
+
