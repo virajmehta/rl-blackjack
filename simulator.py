@@ -198,7 +198,7 @@ class Game():
 
     def hit(self):
         '''
-        Deals another card and returns (newCard, total) If total >= 21, 
+        Deals another card and returns (newHand, newTotal) If total >= 21, 
         game is over and reward will be not None.
         '''
         print 'Action: HIT'

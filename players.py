@@ -3,34 +3,34 @@ This is the file containing all the code needed for each type of blackjack playe
 It will eventually contain six player types: Dealer, Baseline, Oracle, Hi-Lo, Omega II, 
 and Wong Halves. It currently contains the implementations for the first three.
 ''' 
+from algorithms import QLearning
 from simulator import Game
 
-class Player():
+class Player(object):
     '''
     This is the class that wraps over the functions shared by each of the types of players.
     '''
-    def __init__(self, playerName):
+    def __init__(self, name):
         self.game = Game()
+        self.hand = []
+        self.name = name
         self.player = None
-        self.playerName = playerName
-        self.dealer = Dealer(self.game)
+        self.total = 0
         self.winnings = 0
-        if (playerName == 'Baseline'):
-            self.player = Baseline(self.game)
-        if (playerName == 'Oracle'):
-            self.player = Oracle(self.game)
     
     def playGame(self):
         '''
         Plays desired number of hands for given number of iterations.
         '''
         for _ in range(100):
-            self.player.hand, self.player.total = self.game.startHand(1)
-            print '%s\'s Turn!\n' % self.playerName
-            print 'Hand: %s' % self.player.hand
-            print 'Total: %s' % self.player.total
-            self.player.playHand()
-            self.dealer.playHand()
+            self.hand, self.total, _, _ = self.game.startHand(1)
+            print '%s\'s Turn!\n' % self.name
+            print 'Hand: %s' % self.hand
+            print 'Total: %s' % self.total
+            self.playHand()
+            print 'Dealer\'s Turn!\n'
+            print 'Final Hand: %s' % self.game.dealerHand
+            print 'Final Total: %s\n' % self.game.dealerTotal
             self.getWinnings()
 
     def getWinnings(self):
@@ -44,33 +44,11 @@ class Player():
         self.winnings += roundWinnings
         print 'Total Winnings: %s' % self.winnings
         print '--------------------'
-
-
-class Dealer():
-    '''
-    The dealer's implementation. Since the dealer's actions are taken care of in the __endHand__ 
-    method from Game, this simply outputs the dealer's final hand and total.
-    '''
-    def __init__(self, game):
-        self.game = game
-
-    def playHand(self):
-        '''
-        Outputs dealer's final hand and total for the round.
-        '''
-        print 'Dealer\'s Turn!\n'
-        print 'Final Hand: %s' % self.game.dealerHand
-        print 'Final Total: %s\n' % self.game.dealerTotal
-
-class Baseline():
+        
+class Baseline(Player):
     '''
     The baseline implementation. This player stands on every hand, regardless of the cards.
     '''
-    def __init__(self, game):
-        self.game = game
-        self.hand = []
-        self.total = 0
-    
     def playHand(self):
         '''
         Calls stand() from Game to end the hand. Outputs final hand and total for the round.
@@ -79,17 +57,12 @@ class Baseline():
         print 'Final Hand: %s' % self.hand
         print 'Final Total: %s\n' % self.total
  
-class Oracle():
+class Oracle(Player):
     '''
     The oracle implementation. This player evaluates all possible actions given the hand 
     and peeks into the deck to make the best possible move for each state, 
     i.e. the perfect blackjack player.
     '''
-    def __init__(self, game):
-        self.game = game
-        self.hand = []
-        self.total = 0
-    
     def playHand(self):
         '''
         Evaluates possible actions and takes actions with the highest reward for the 
@@ -209,24 +182,24 @@ class Oracle():
             return -1 * self.game.bet
 
 
-class CardCountingRLPlayer(player):
+class RLPlayer(Player):
     def __init__(self, strat, algo):
-        super(CardCountingPlayer, self).__init__('cardCounter')
+        super(RLPlayer, self).__init__('RL')
         self.count = 0.0
-        self.algo = algo # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        self.algo = QLearning() # we want the algo to take (state, pssible actions, reward) and return an action \in actions
         if strat == 'Hi-Lo':
             self.strat = self.hilo 
-        elif strat == 'Omega':
+        elif strat == 'Omega II':
             self.strat = self.omega
-        elif strat == 'Wong-Halves':
+        elif strat == 'Wong Halves':
             self.strat = self.wonghalf
         else:
-            self.strat = None
+            self.strat = None    
         self.numAces = self.game.deck.getNumDecks() * 4# not always used
         '''here, self.strat is a utility function that returns the current count'''
 
     def train(self, numiter):
-    ''' train an algorithm a number of iterations'''
+        ''' train an algorithm a number of iterations'''
         batch_size = 100
         total_reward = 0.0
         for iter in xrange(numiter):
@@ -242,10 +215,10 @@ class CardCountingRLPlayer(player):
             state = (countState, 0, 0)
 
             #decide how to bet based on count
-            actions = ['big', 'small']
-            betlevel = self.algo.getAction(state, actions, 0)
-            bet = 1 if betlevel == 'small' else 10
-            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
+            #actions = ['big', 'small']
+            #betlevel = self.algo.getAction(state, actions, 0)
+            bet = 1 #if betlevel == 'small' else 10
+            playerHand, playerTotal, dealerCards, dealerTotal = self.game.startHand(bet)
             
             while len(actions) > 0:
                 actions = self.game.getPossibleActions()
@@ -254,28 +227,28 @@ class CardCountingRLPlayer(player):
                 reward = self.game.getReward()
                 total_reward += reward
                 action = self.algo.getAction(state, actions, reward)
-
-    def test(self, numiter): #work in progress, need to write algos and adjust greediness
-        reward = 0.0
-        for _ in xrange(numiter):
-            shuffled = False
-            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
-                shuffled = True
-            countState = self.strat([], shuffled=True)
-            state = (countState, 0, 0)
-            actions = ['big', 'small']
-            betlevel = self.algo.getAction(state, actions, 0)
-            bet = 1 if betlevel == 'small' else 10
-            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
-            while len(actions) > 0:
-                actions = self.game.getPossibleActions()
-                countState = self.strat(playerHand + dealerCards)
-                state = (countState, playerHand, dealerCards)
-                reward = self.game.getReward()
-                total_reward += reward
-                action = self.algo.getAction(state, actions, reward)
-        return reward / numiter
-        
+#
+#    def test(self, numiter): #work in progress, need to write algos and adjust greediness
+#        reward = 0.0
+#        for _ in xrange(numiter):
+#            shuffled = False
+#            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
+#                shuffled = True
+#            countState = self.strat([], shuffled=True)
+#            state = (countState, 0, 0)
+#            actions = ['big', 'small']
+#            betlevel = self.algo.getAction(state, actions, 0)
+#            bet = 1 if betlevel == 'small' else 10
+#            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
+#            while len(actions) > 0:
+#                actions = self.game.getPossibleActions()
+#                countState = self.strat(playerHand + dealerCards)
+#                state = (countState, playerHand, dealerCards)
+#                reward = self.game.getReward()
+#                total_reward += reward
+#                action = self.algo.getAction(state, actions, reward)
+#        return reward / numiter
+#        
     def hilo(self, newCards, shuffled=False):
         if shuffled:
             self.count = 0.0
@@ -298,7 +271,6 @@ class CardCountingRLPlayer(player):
             self.count += countValues[card]
         trueCount = self.count * self.game.deck.getNumCards() / 52.0
         return (trueCount, self.numAces)
-
 
 
     def wonghalf(self, newCards, shuffled=False):
