@@ -209,7 +209,7 @@ class Oracle():
             return -1 * self.game.bet
 
 
-class CardCountingRLPlayer(player):
+class CardCountingRLPlayer(Player):
     def __init__(self, strat, algo):
         super(CardCountingPlayer, self).__init__('cardCounter')
         self.count = 0.0
@@ -226,7 +226,7 @@ class CardCountingRLPlayer(player):
         '''here, self.strat is a utility function that returns the current count'''
 
     def train(self, numiter):
-    ''' train an algorithm a number of iterations'''
+        ''' train an algorithm a number of iterations'''
         batch_size = 100
         total_reward = 0.0
         for iter in xrange(numiter):
@@ -238,7 +238,7 @@ class CardCountingRLPlayer(player):
             if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
                 shuffled = True
 
-            countState = self.strat([], shuffled=True)
+            countState = self.strat([], shuffled)
             state = (countState, 0, 0)
 
             #decide how to bet based on count
@@ -246,14 +246,17 @@ class CardCountingRLPlayer(player):
             betlevel = self.algo.getAction(state, actions, 0)
             bet = 1 if betlevel == 'small' else 10
             playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
-            
+            newCards =  playerHand + dealerHand 
             while len(actions) > 0:
                 actions = self.game.getPossibleActions()
-                countState = self.strat(playerHand + dealerCards)
+                countState = self.strat(newCards)
                 state = (countState, playerHand, dealerCards)
                 reward = self.game.getReward()
                 total_reward += reward
                 action = self.algo.getAction(state, actions, reward)
+                newCards = []
+                if action is not None:
+                    action(newCards)
 
     def test(self, numiter): #work in progress, need to write algos and adjust greediness
         reward = 0.0
@@ -267,13 +270,17 @@ class CardCountingRLPlayer(player):
             betlevel = self.algo.getAction(state, actions, 0)
             bet = 1 if betlevel == 'small' else 10
             playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
+            newCards =  playerHand + dealerHand 
             while len(actions) > 0:
                 actions = self.game.getPossibleActions()
-                countState = self.strat(playerHand + dealerCards)
+                countState = self.strat(newCards)
                 state = (countState, playerHand, dealerCards)
                 reward = self.game.getReward()
                 total_reward += reward
                 action = self.algo.getAction(state, actions, reward)
+                newCards = []
+                if action is not None:
+                    action(newCards)
         return reward / numiter
         
     def hilo(self, newCards, shuffled=False):

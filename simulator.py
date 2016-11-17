@@ -174,9 +174,11 @@ class Game():
         Plays out dealer's hand after player has finished turn. Calls endHand() 
         from Deck to see if cards need to be reshuffled.
         '''
+        newCards = [self.dealerHand[0]]
         if dealerDraw:
             while self.dealerTotal < 17:
                 newCard = self.deck.drawCard()
+                newCards.append(newCard)
                 self.dealerTotal += self.cardValues[newCard]
                 self.dealerHand.append(newCard)
                 if self.dealerTotal > 21:
@@ -186,23 +188,27 @@ class Game():
                             self.dealerHand[index] = 'a' 
                             break
         self.isOver = True
-        return self.deck.endHand()
+        self.deck.endHand()
+        return newCards
 
-    def stand(self):
+
+    def stand(self, newCards):
         '''
         Ends hand as is and does the dealer play. Call getReward() to see what 
         happens after. This function returns None.
         '''
         print 'Action: STAND'
-        self.__endHand__()
+        newCards[:] = self.__endHand__()[:]
 
-    def hit(self):
+
+    def hit(self, newCards):
         '''
         Deals another card and returns (newCard, total) If total >= 21, 
         game is over and reward will be not None.
         '''
         print 'Action: HIT'
         newCard = self.deck.drawCard()
+        newCards.append(newCard)
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
         if self.playerTotal == 21:
@@ -218,13 +224,14 @@ class Game():
         return (self.playerHand, self.playerTotal)
 
     
-    def double(self):
+    def double(self, newCards):
         '''
         Same as hit but doubles bet and lets the dealer play. Returns (newHand, newTotal). 
         Call getReward() to see what happened.
         '''
         print 'Action: DOUBLE DOWN'
         newCard = self.deck.drawCard()
+        newCards.append(newCard)
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
         if self.playerTotal > 21:
@@ -237,12 +244,12 @@ class Game():
         self.__endHand__()
         return (self.playerHand, self.playerTotal)
 
-    def surrender(self):
+    def surrender(self, newCards):
         '''
         Ends game at beginning and returns None. Call getReward() to see what happens after.
         '''
         print 'Action: SURRENDER\n'
         self.bet /= 2.0
         self.playerTotal = -1
-        self.__endHand__(False)
+        newCards[:] = self.__endHand__(False)[:]
 
