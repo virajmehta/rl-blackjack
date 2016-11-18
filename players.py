@@ -2,7 +2,8 @@
 This is the file containing all the code needed for each type of blackjack player. 
 It will eventually contain six player types: Dealer, Baseline, Oracle, Hi-Lo, Omega II, 
 and Wong Halves. It currently contains the implementations for the first three.
-''' 
+'''
+import time
 from algorithms import QLearning
 from simulator import Game
 
@@ -53,7 +54,7 @@ class Baseline(Player):
         '''
         Calls stand() from Game to end the hand. Outputs final hand and total for the round.
         '''
-        self.game.stand()
+        self.game.stand([])
         print 'Final Hand: %s' % self.hand
         print 'Final Total: %s\n' % self.total
  
@@ -70,12 +71,12 @@ class Oracle(Player):
         '''
         action = self.evaluateMoves()
         while action == self.game.hit:
-            self.hand, self.total = action()
+            self.hand, self.total = action([])
             print 'Hand: %s' % self.hand
             print 'Total: %s' % self.total
             action = self.evaluateMoves()
         if action != None:
-            newState = action()
+            newState = action([])
             if newState != None: 
                 self.hand, self.total = newState
             if action != self.game.surrender:
@@ -186,7 +187,7 @@ class RLPlayer(Player):
     def __init__(self, strat, algo):
         super(RLPlayer, self).__init__('RL')
         self.count = 0.0
-        self.algo = QLearning() # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        self.algo = QLearning(self.game) # we want the algo to take (state, pssible actions, reward) and return an action \in actions
         if strat == 'Hi-Lo':
             self.strat = self.hilo 
         elif strat == 'Omega II':
@@ -200,55 +201,117 @@ class RLPlayer(Player):
 
     def train(self, numiter):
         ''' train an algorithm a number of iterations'''
-        batch_size = 100
+        batch_size = 10000
         total_reward = 0.0
+        winnings = 0.0
         for iter in xrange(numiter):
             if iter % batch_size == 0:
-                print 'batch {}, avg reward {}'.format(iter / batch_size, total_reward / batch_size)
+                print 'batch {}, avg reward {}'.format(iter / batch_size + 1, total_reward / batch_size)
+                winnings += total_reward
                 total_reward = 0.0
 
             shuffled = False #check for shuffle
             if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
                 shuffled = True
 
-            countState = self.strat([], shuffled=True)
+            countState = self.strat([], shuffled)
             state = (countState, 0, 0)
 
             #decide how to bet based on count
             #actions = ['big', 'small']
             #betlevel = self.algo.getAction(state, actions, 0)
             bet = 1 #if betlevel == 'small' else 10
-            playerHand, playerTotal, dealerCards, dealerTotal = self.game.startHand(bet)
-            
+            playerHand, playerTotal, dealerHand, dealerTotal = self.game.startHand(bet)
+            newCards =  playerHand + dealerHand
+            countState = self.strat(newCards)
+            state = (countState, playerTotal, dealerTotal)
+            while state != None:
+                actions = self.game.getPossibleActions()
+                newCards = []
+                newState = None
+                action = self.algo.getAction(state, actions)
+                if action != None:
+                    _, playerTotal = action(newCards)
+                    countState = self.strat(newCards)
+                    newState = (countState, playerTotal, dealerTotal)
+                _, reward = self.game.getReward()
+                total_reward += reward
+                self.algo.incorporateFeedback(state, action, reward, newState)
+                state = newState
+
+        winnings = winnings / numiter
+        print winnings
+        time.sleep(2)
+
+        
+        winnings = 0.0
+        total_reward = 0.0
+        for iter in xrange(numiter):
+            if iter % batch_size == 0:
+                print 'batch {}, avg reward {}'.format(iter / batch_size + 1, total_reward / batch_size)
+                winnings += total_reward
+                total_reward = 0.0
+
+            shuffled = False #check for shuffle
+            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
+                shuffled = True
+
+            countState = self.strat([], shuffled)
+            state = (countState, 0, 0)
+
+            #decide how to bet based on count
+            #actions = ['big', 'small']
+            #betlevel = self.algo.getAction(state, actions, 0)
+            bet = 1 #if betlevel == 'small' else 10
+            playerHand, playerTotal, dealerHand, dealerTotal = self.game.startHand(bet)
+            newCards =  playerHand + dealerHand
+            countState = self.strat(newCards)
+            state = (countState, playerTotal, dealerTotal)
+            while state != None:
+                actions = self.game.getPossibleActions()
+                newCards = []
+                newState = None
+                action = self.algo.getBestAction(state, actions)
+                if action != None:
+                    _, playerTotal = action(newCards)
+                    countState = self.strat(newCards)
+                    newState = (countState, playerTotal, dealerTotal)
+                _, reward = self.game.getReward()
+                total_reward += reward
+                self.algo.incorporateFeedback(state, action, reward, newState)
+                state = newState
+
+        winnings = winnings / numiter
+        print winnings
+
+
+
+    def test(self, numiter):
+        reward = 0.0
+        for _ in xrange(numiter):
+            shuffled = False
+            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
+                shuffled = True
+            countState = self.strat([], shuffled=True)
+            state = (countState, 0, 0)
+            actions = ['big', 'small']
+            betlevel = self.algo.getAction(state, actions, 0)
+            bet = 1 #if betlevel == 'small' else 10
+            playerHand, playerTotal, dealerHand, dealerTotal = self.game.startHand(bet)
+            newCards =  playerHand + dealerHand
+            countState = self.strat(newCards)
+            state = (countState, playerHand, dealerHand)
             while len(actions) > 0:
                 actions = self.game.getPossibleActions()
-                countState = self.strat(playerHand + dealerCards)
-                state = (countState, playerHand, dealerCards)
                 reward = self.game.getReward()
                 total_reward += reward
-                action = self.algo.getAction(state, actions, reward)
-#
-#    def test(self, numiter): #work in progress, need to write algos and adjust greediness
-#        reward = 0.0
-#        for _ in xrange(numiter):
-#            shuffled = False
-#            if self.game.deck.getNumCards() == self.game.deck.getNumDecks() * 52:
-#                shuffled = True
-#            countState = self.strat([], shuffled=True)
-#            state = (countState, 0, 0)
-#            actions = ['big', 'small']
-#            betlevel = self.algo.getAction(state, actions, 0)
-#            bet = 1 if betlevel == 'small' else 10
-#            playerHand, playerTotal,dealerCards, dealerTotal = self.game.startHand(bet)
-#            while len(actions) > 0:
-#                actions = self.game.getPossibleActions()
-#                countState = self.strat(playerHand + dealerCards)
-#                state = (countState, playerHand, dealerCards)
-#                reward = self.game.getReward()
-#                total_reward += reward
-#                action = self.algo.getAction(state, actions, reward)
-#        return reward / numiter
-#        
+                action = self.algo.getAction(state, actions)
+                newCards = []
+                if action is not None:
+                    playerHand, _ = action(newCards)
+                    countState = self.strat(newCards)
+        return reward / numiter
+        
     def hilo(self, newCards, shuffled=False):
         if shuffled:
             self.count = 0.0

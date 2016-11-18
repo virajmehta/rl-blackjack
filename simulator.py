@@ -129,7 +129,7 @@ class Game():
         returns a value of the reward of that hand and the cards in the final dealer hand as (result, reward).
         '''
         if not self.isOver:
-            return 0
+            return ('GAME NOT OVER!', 0)
         if self.isBlackjack:
             return ('BLACKJACK!', 1.5 * self.bet)
         if self.playerTotal > 21:
@@ -141,7 +141,7 @@ class Game():
         if self.playerTotal == self.dealerTotal:
             return ('PUSH!', 0)
         if self.playerTotal < 0:
-            return ('PLAYER SURRENDERS!', -1 * self.bet)
+            return ('PLAYER SURRENDERS!', -0.5 * self.bet)
         else:
             return ('DEALER WINS!', -1 * self.bet)
 
@@ -174,9 +174,11 @@ class Game():
         Plays out dealer's hand after player has finished turn. Calls endHand() 
         from Deck to see if cards need to be reshuffled.
         '''
+        newCards = [self.dealerHand[0]]
         if dealerDraw:
             while self.dealerTotal < 17:
                 newCard = self.deck.drawCard()
+                newCards.append(newCard)
                 self.dealerTotal += self.cardValues[newCard]
                 self.dealerHand.append(newCard)
                 if self.dealerTotal > 21:
@@ -186,23 +188,27 @@ class Game():
                             self.dealerHand[index] = 'a' 
                             break
         self.isOver = True
-        return self.deck.endHand()
+        self.deck.endHand()
+        return newCards
 
-    def stand(self):
+
+    def stand(self, newCards):
         '''
         Ends hand as is and does the dealer play. Call getReward() to see what 
         happens after. This function returns None.
         '''
-        print 'Action: STAND'
-        self.__endHand__()
+        #print 'Action: STAND'
+        newCards[:] = self.__endHand__()[:]
+        return (self.playerHand, self.playerTotal)
 
-    def hit(self):
+    def hit(self, newCards):
         '''
         Deals another card and returns (newHand, newTotal) If total >= 21, 
         game is over and reward will be not None.
         '''
-        print 'Action: HIT'
+        #print 'Action: HIT'
         newCard = self.deck.drawCard()
+        newCards.append(newCard)
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
         if self.playerTotal == 21:
@@ -218,13 +224,14 @@ class Game():
         return (self.playerHand, self.playerTotal)
 
     
-    def double(self):
+    def double(self, newCards):
         '''
         Same as hit but doubles bet and lets the dealer play. Returns (newHand, newTotal). 
         Call getReward() to see what happened.
         '''
-        print 'Action: DOUBLE DOWN'
+        #print 'Action: DOUBLE DOWN'
         newCard = self.deck.drawCard()
+        newCards.append(newCard)
         self.playerTotal += self.cardValues[newCard]
         self.playerHand.append(newCard)
         if self.playerTotal > 21:
@@ -237,12 +244,14 @@ class Game():
         self.__endHand__()
         return (self.playerHand, self.playerTotal)
 
-    def surrender(self):
+    def surrender(self, newCards):
         '''
         Ends game at beginning and returns None. Call getReward() to see what happens after.
         '''
-        print 'Action: SURRENDER\n'
+        #print 'Action: SURRENDER\n'
         self.bet /= 2.0
+        oldTotal = self.playerTotal
         self.playerTotal = -1
-        self.__endHand__(False)
+        newCards[:] = self.__endHand__(False)[:]
+        return (self.playerHand, oldTotal)
 

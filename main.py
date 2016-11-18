@@ -24,11 +24,13 @@ def main():
             player = None
             if playerName == 'Baseline':
                 player = Baseline(playerName)
+                player.playGame()
             elif playerName == 'Oracle':
                 player = Oracle(playerName)
+                player.playGame()
             else:
                 player = RLPlayer(getStrategy(), getAlgorithm())
-            player.playGame()
+                player.train(1000000)
             break
 
 if __name__ == '__main__': main()
