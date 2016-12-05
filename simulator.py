@@ -121,7 +121,6 @@ class Game():
             self.isBlackjack = True
             self.isOver = True
         return (self.playerHand[:], self.playerTotal, self.dealerHand[1:], self.dealerTotal)
-        
 
     def getReward(self):
         '''

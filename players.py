@@ -187,7 +187,7 @@ class RLPlayer(Player):
     def __init__(self, strat, algo):
         super(RLPlayer, self).__init__('RL')
         self.count = 0.0
-        self.algo = QLearning(self.game, 'linear') # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        self.algo = QLearning(self.game, 'dqn') # we want the algo to take (state, pssible actions, reward) and return an action \in actions
         if strat == 'Hi-Lo':
             self.strat = self.hilo 
         elif strat == 'Omega II':
@@ -195,7 +195,7 @@ class RLPlayer(Player):
         elif strat == 'Wong Halves':
             self.strat = self.wonghalf
         else:
-            self.strat = None    
+            self.strat = None
         self.numAces = self.game.deck.getNumDecks() * 4# not always used
         '''here, self.strat is a utility function that returns the current count'''
 
@@ -226,7 +226,7 @@ class RLPlayer(Player):
             newCards =  playerHand + dealerHand
             countState = self.strat(newCards)
             state = (countState, playerTotal, dealerTotal)
-            while state != None:
+            while state != None and not self.game.isOver:
                 actions = self.game.getPossibleActions()
                 newCards = []
                 newState = None
