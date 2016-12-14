@@ -69,8 +69,6 @@ class QLearning():
         if np.isnan(total):
             print 'crap'
             return random.choice(actions)
-        print 'shit' #for debugging purposes, obviously
-        import pdb; pdb.set_trace()
         return None
 
 
@@ -87,7 +85,7 @@ class QLearning():
             for i in range(self.currentHandStart, len(self.buffer[2])):
                 self.buffer[2][i] = reward
             self.currentHandStart = len(self.buffer[2])
-        if len(self.buffer[0]) >= 10:
+        if len(self.buffer[0]) >= 50:
             self.qNet.trainBatch(self.buffer)
             self.buffer = [[],[],[]]
 
@@ -251,7 +249,7 @@ class Qnetwork():
         self.batchNum += 1
         old_states = np.array(batch[0])
         actions = np.array(batch[1])
-        target_Q = np.array(batch[2]).reshape((-1, 1))
+        target_Q = np.ravel(array(batch[2])).reshape((-1, 1))
         with self.sess.as_default():
             self.sess.run(self.updateModel, feed_dict={
                 self.phi: old_states,
@@ -262,6 +260,7 @@ class Qnetwork():
                 self.saver.save(self.sess, self.path+'/model-'+str(self.batchNum)+'.cptk')
                 print 'Saved Model'
 
+kPGNLearningRate = 0.001
 class PGNetwork():
     def __init__(self):
         self.path = './pgn'
@@ -284,13 +283,14 @@ class PGNetwork():
         fc2 = tf.add(tf.matmul(fc1, self.weights['wfc2']), self.biases['bfc2'])
         fc2 = tf.nn.tanh(fc2)
         self.fc2 = fc2
+        self.fc2 = tf.Print(self.fc2, [self.fc2], message='hi')
         self.output = tf.nn.softmax(fc2)
         self.chosen_action = tf.placeholder(tf.float32, shape=[None,6])
-        processed_logits = tf.pow(self.output, self.chosen_action)
-        logs = tf.log(tf.reduce_prod(processed_logits, axis=0))
-        self.action_value = tf.placeholder(tf.float32, shape=[None,1])
-        self.likelihood = tf.mul(logs,self.action_value)
-        self.trainer = tf.train.AdamOptimizer(learning_rate=kLearningRate)
+        self.processed_logits = tf.pow(self.output, self.chosen_action)
+        self.logs = tf.log(tf.reduce_prod(self.processed_logits, axis=1))
+        self.action_value = tf.placeholder(tf.float32, shape=[None])
+        self.likelihood = tf.mul(self.logs,self.action_value)
+        self.trainer = tf.train.AdamOptimizer(learning_rate=kPGNLearningRate)
         self.updateModel = self.trainer.minimize(-self.likelihood)
         self.init = tf.global_variables_initializer()
         self.sess = tf.Session()
@@ -309,7 +309,7 @@ class PGNetwork():
         self.batchNum += 1
         old_states = np.array(batch[0])
         actions = np.array(batch[1])
-        rewards = np.array(batch[2]).reshape((-1,1))
+        rewards = np.ravel(np.array(batch[2]))
         with self.sess.as_default():
             self.sess.run(self.updateModel, feed_dict={
                 self.phi: old_states,
