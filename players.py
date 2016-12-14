@@ -187,9 +187,9 @@ class RLPlayer(Player):
     def __init__(self, strat, algo):
         super(RLPlayer, self).__init__('RL')
         self.count = 0.0
-        self.algo = QLearning(self.game, 'dqn') # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        self.algo = QLearning(self.game, 'pgn') # we want the algo to take (state, pssible actions, reward) and return an action \in actions
         if strat == 'Hi-Lo':
-            self.strat = self.hilo 
+            self.strat = self.hilo
         elif strat == 'Omega II':
             self.strat = self.omega
         elif strat == 'Wong Halves':
@@ -244,7 +244,6 @@ class RLPlayer(Player):
         print winnings
         time.sleep(2)
 
-        
         winnings = 0.0
         total_reward = 0.0
         for iter in xrange(numiter):

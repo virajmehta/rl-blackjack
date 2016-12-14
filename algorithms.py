@@ -41,7 +41,56 @@ class QLearning():
             self.buffer = [[], [],[]] #states, actions, targetQ
             self.cacheState = None
             self.cacheQ = None
-        #deep goes here
+        elif qLearnType == 'pgn': #not actually Q learning but whatever
+            self.qNet = PGNetwork()
+            self.getAction = self.pgGetAction
+            self.getBestAction = self.pgGetAction
+            self.incorporateFeedback = self.pgTrain
+            self.buffer = [[],[],[]]
+            self.currentHandStart = 0
+        else:
+            print 'shit!'
+
+    def pgGetAction(self, state, actions):
+        self.numIters += 1
+        if len(actions) == 0:
+            return None
+        action_probs = self.qNet.get_action_probs(self.phi(state))[0]
+        total = 0.0
+        for action in actions:
+            total += action_probs[self.kActionIndex[action]]
+        val = random.random() * total
+        total = 0.0
+        for action in actions:
+            if action_probs[self.kActionIndex[action]] + total > val:
+                return action
+            else:
+                total += action_probs[self.kActionIndex[action]]
+        if np.isnan(total):
+            print 'crap'
+            return random.choice(actions)
+        print 'shit' #for debugging purposes, obviously
+        import pdb; pdb.set_trace()
+        return None
+
+
+
+    def pgTrain(self, state, action, reward, newState):
+        if action is None:
+            import pdb; pdb.set_trace()
+        self.buffer[0].append(self.phi(state))
+        action1hot = np.zeros(6)
+        action1hot[self.kActionIndex[action]] = 1
+        self.buffer[1].append(action1hot)
+        self.buffer[2].append(0)
+        if self.game.isOver:
+            for i in range(self.currentHandStart, len(self.buffer[2])):
+                self.buffer[2][i] = reward
+            self.currentHandStart = len(self.buffer[2])
+        if len(self.buffer[0]) >= 10:
+            self.qNet.trainBatch(self.buffer)
+            self.buffer = [[],[],[]]
+
 
     def DQNEval(self, state, action):
         if self.cacheState != state:
@@ -71,7 +120,7 @@ class QLearning():
         self.buffer[2].append(targetQ)
         if len(self.buffer[0]) >= 50:
             self.qNet.trainBatch(self.buffer)
-            buffer = [[], [], []]
+            self.buffer = [[], [], []]
 
 
 
@@ -145,22 +194,24 @@ class Qnetwork():
         if not os.path.exists(self.path):
             os.chmod(self.path, 0777)
             os.makedirs(self.path)
-        self.weights = {
-            # first layer of FC layers, 42 inputs, 40 outputs
-            'wfc1': tf.Variable(tf.random_normal([42, 40])),
-            # second layer of FC layers, 40 outputs, 30 outputs
-            'wfc2': tf.Variable(tf.random_normal([40, 30])),
-            # third layer FC, 30 inputs, 20 outputs
-            'wfc3': tf.Variable(tf.random_normal([30, 20])),
-            # fourth layer FC, 20 inputs, 6 outputs
-            'wfc4': tf.Variable(tf.random_normal([20, 6]))
-        }
-        self.biases = {
-            'bfc1': tf.Variable(tf.random_normal([40])),
-            'bfc2': tf.Variable(tf.random_normal([30])),
-            'bfc3': tf.Variable(tf.random_normal([20])),
-            'bfc4': tf.Variable(tf.random_normal([6]))
-        }
+        with tf.name_scope('weights') as scope:
+            self.weights = {
+                # first layer of FC layers, 42 inputs, 40 outputs
+                'wfc1': tf.Variable(tf.random_normal([42, 40]), name='layer1'),
+                # second layer of FC layers, 40 outputs, 30 outputs
+                'wfc2': tf.Variable(tf.random_normal([40, 30]), name='layer2'),
+                # third layer FC, 30 inputs, 20 outputs
+                'wfc3': tf.Variable(tf.random_normal([30, 20]), name='layer3'),
+                # fourth layer FC, 20 inputs, 6 outputs
+                'wfc4': tf.Variable(tf.random_normal([20, 6]), name='layer4')
+            }
+        with tf.name_scope('biases') as scope:
+            self.biases = {
+                'bfc1': tf.Variable(tf.random_normal([40]), name='layer1'),
+                'bfc2': tf.Variable(tf.random_normal([30]), name='layer2'),
+                'bfc3': tf.Variable(tf.random_normal([20]), name='layer3'),
+                'bfc4': tf.Variable(tf.random_normal([6]), name='layer4')
+            }
         self.phi = tf.placeholder(tf.float32, shape=[None, 42])
         fc1 = tf.add(tf.matmul(self.phi, self.weights['wfc1']), self.biases['bfc1'])
         fc1 = tf.nn.relu(fc1)
@@ -173,15 +224,15 @@ class Qnetwork():
         fc3 = tf.nn.relu(fc3)
         # fc3 = tf.nn.dropout(fc3, kDropout)
         fc4 = tf.add(tf.matmul(fc3, self.weights['wfc4']), self.biases['bfc4'])
-        fc4 = tf.nn.relu(fc4)
         self.output = fc4
         self.targetQ = tf.placeholder(tf.float32, shape=[None, 1])
         self.actions = tf.placeholder(tf.float32, shape=[None, 6])
         qVals = tf.mul(self.actions, self.output)
-        self.Q = tf.reduce_max(qVals, axis=0)
+        self.Q = tf.reduce_max(qVals, axis=1)
         self.error = tf.square(self.targetQ - self.Q)
         self.loss = tf.reduce_mean(self.error)
-        self.trainer = tf.train.GradientDescentOptimizer(learning_rate=kLearningRate)
+        tf.summary.scalar('loss', self.loss)
+        self.trainer = tf.train.AdamOptimizer(learning_rate=kLearningRate)
         self.updateModel = self.trainer.minimize(self.loss)
         self.init = tf.global_variables_initializer()
         self.sess = tf.Session()
@@ -211,8 +262,63 @@ class Qnetwork():
                 self.saver.save(self.sess, self.path+'/model-'+str(self.batchNum)+'.cptk')
                 print 'Saved Model'
 
+class PGNetwork():
+    def __init__(self):
+        self.path = './pgn'
+        if not os.path.exists(self.path):
+            os.chmod(self.path, 0777)
+            os.makedirs(self.path)
+        self.weights = {
+            'wfc1': tf.Variable(tf.random_normal([42, 100])),
+            'wfc2': tf.Variable(tf.random_normal([100, 6]))
+        }
+        self.biases = {
+            'bfc1': tf.Variable(tf.random_normal([100])),
+            'bfc2': tf.Variable(tf.random_normal([6]))
+        }
+        self.phi = tf.placeholder(tf.float32, shape=[None, 42])
+        fc1 = tf.add(tf.matmul(self.phi, self.weights['wfc1']), self.biases['bfc1'])
+        fc1 = tf.nn.tanh(fc1)
+        # dropout?
+        # fc1 = tf.nn.dropout(fc1, kDropout)
+        fc2 = tf.add(tf.matmul(fc1, self.weights['wfc2']), self.biases['bfc2'])
+        fc2 = tf.nn.tanh(fc2)
+        self.fc2 = fc2
+        self.output = tf.nn.softmax(fc2)
+        self.chosen_action = tf.placeholder(tf.float32, shape=[None,6])
+        processed_logits = tf.pow(self.output, self.chosen_action)
+        logs = tf.log(tf.reduce_prod(processed_logits, axis=0))
+        self.action_value = tf.placeholder(tf.float32, shape=[None,1])
+        self.likelihood = tf.mul(logs,self.action_value)
+        self.trainer = tf.train.AdamOptimizer(learning_rate=kLearningRate)
+        self.updateModel = self.trainer.minimize(-self.likelihood)
+        self.init = tf.global_variables_initializer()
+        self.sess = tf.Session()
+        self.sess.run(self.init)
+        self.batchNum =0
+        self.saver = tf.train.Saver()
+
+    def get_action_probs(self, phi):
+        feed_dict = {self.phi: np.reshape(phi, (1,-1))}
+        with self.sess.as_default():
+            return self.output.eval(feed_dict=feed_dict)
 
 
+    def trainBatch(self, batch):
+        '''here, batch is a list of lists [[states],[actions],[targetQ]]'''
+        self.batchNum += 1
+        old_states = np.array(batch[0])
+        actions = np.array(batch[1])
+        rewards = np.array(batch[2]).reshape((-1,1))
+        with self.sess.as_default():
+            self.sess.run(self.updateModel, feed_dict={
+                self.phi: old_states,
+                self.chosen_action: actions,
+                self.action_value: rewards
+            })
+            if self.batchNum %10000 == 0:
+                self.saver.save(self.sess, self.path+'/model-'+str(self.batchNum)+'.cptk')
+                print 'Saved Model'
 
 #not doing expereince replay, explain why
 
