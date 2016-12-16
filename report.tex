@@ -1,0 +1,162 @@
+\documentclass[12pt]{article}
+\usepackage[12pt]{moresize}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{enumerate}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\usepackage{multicol}
+\usepackage{wrapfig}
+
+\setlength{\columnsep}{0.1pc}
+
+\title{Bringing Down the House with Artificial Intelligence - CS221 Project}
+\author{Viraj Mehta, Lincoln Valdez}
+\date{}
+\begin{document}
+
+	\maketitle
+	\vspace{-0.3in}
+    
+    {\large \textbf{0 Abstract}} \newline 
+    
+    Blackjack is the world's most popular card game. The goal of this project was to explore the performance limits of reinforcement learning algorithms with regard to the game of blackjack and identify if playing advantages can be created simply from experience and the strategy of card counting. \newline
+    
+    {\large \textbf{1 The Blackjack Problem}} \newline 
+       
+    The objective of the blackjack player is to obtain a higher total than the dealer without exceeding a total of $21$. The player and the dealer are both dealt two cards, with the player required play first: to take actions until either he or she is satisfied or busts. Only one of the dealer's cards is shown to the player. A lot of the dealer's advantage comes with the order of turns; the expected value of the game, even with basic (probabilistic) strategy involved, is negative. \newline 
+    
+    There are four possible decisions a player can make: hit, stand, double down or surrender. Hitting involves a player receiving another card. This gives the player an opportunity to get closer to $21$, but it also presents the chance of exceeding $21$. Standing is simply keeping the hand that has already been dealt. At any time in the hand, a player may choose to double down. This means that the player doubles his or her bet with the binding condition of taking precisely one more card. Finally, surrendering is the opportunity for the player to minimize loss: if they see the dealer's face-up card against their hand and decide that it is not worth the risk, they can surrender and only lose half of the bet. We decided not to use the splitting as a legal action, given the parallel state spaces we would have to explore. \newline
+    
+    The blackjack game as a stochastic problem can be modeled as a Markov Decision Process (MDP). We will go more in depth into this architecture later. Because of how easily an MDP could model the game, we believed that reinforcement learning was a proper approach to explore the rewards of card counting through experience in our search for the ideal blackjack strategy. \pagebreak 
+    
+    {\large \textbf{2 Card Counting}} \newline 
+    
+    \textbf{2.1 Outline} \newline
+    
+    Card counting is a blackjack strategy that enables the player to track the relationship between the number of high and low cards that have been used in the game. When a larger number of higher cards remain in the deck, the player is generally at an advantage and can reap the benefits by placing a higher bet. On the other hand, if there is a larger number of lower cards remaining, the player should reduce risk by placing lower bets. There are three levels of card counting systems, from Level $1$ (easiest) to Level $3$ (hardest). We will explore one method in each of the levels, namely, the Hi-Lo, Omega II and Wong Halves systems. \newline
+
+	One of the original tradeoffs between levels of card counting methods is that they were designed with the computational limits of a human brain in mind, especially with regard to mental math. In this case, however, the human brain is now a computer, and as such, the discrepancy between calculation time of the easiest and most difficult systems will be largely eliminated. \newline 
+
+	\textbf{2.2 Hi-Lo Strategy (Level 1)} \newline 
+    
+    The Hi-Lo strategy was popularized by the film \textit{21} and is one of the easiest to learn. It is known as a balanced strategy, because after counting through a standard $52$-card deck, you are left with a count of $0$. \newline
+    
+    In the Hi-Lo strategy, each of the cards are assigned a value, with cards $[2, 3, 4, 5, 6]$ given a value of $+1$, known as ``low'' cards. Oppositely, the cards $[10, J, Q, K, A]$ are assigned a value of $-1$, known as the ``high'' cards. The ``middle'' cards $[7, 8, 9]$ have a value of 0. \newline
+
+	As cards are dealt, the player keeps track of the count, for example: $[10, 2, 7, K, 5]  -1 + 1 + 0 - 1 + 1 = 0$. If the count is greater than zero, there are more high cards than low cards remaining in the deck. The larger the count, the greater the chance of winning blackjack. \newline 
+    
+    \textbf{2.3 The Omega II Strategy (Level 2)} \newline 
+    
+    The Omega II strategy is a balanced system developed by Bryan Carlson and detailed in his book, \textit{Blackjack for Blood}. The count is slightly more complicated than the simple -1, 0, +1 Hi-Lo counting system. Cards are assigned values as follows: 
+	
+    \begin{itemize}
+    	\item $[2, 3, 7] = +2$
+        \item $[4, 5, 6] = +1$
+        \item $[8, A] = 0$
+        \item $[9] = -1$
+        \item $[10, J, Q, K] = -2$
+    \end{itemize} 
+    
+    Other than the different card values, the basic strategy behind the count remains the same; the larger the count, the more the player should bet. What makes this strategy more effective is the fact that 8’s and Aces are not factored into the count, which are the most common cards to split on a hand. Additionally, the heavier weights on the lower and higher value cards sway the count a lot more, which helps the player make a more sound probabilistic decision. \newline
+    
+    \textbf{2.4 The Wong Halves Strategy (Level 3)} \newline
+    
+    The Wong Halves strategy is a balanced system developed by Stanford Wong and described in his book, \textit{Professional Blackjack}. It is known as one of the most complicated methods, primarily because of the six possible values that cards can take on and, as the name implies, its use of fractions. The card values are:
+    
+	\begin{itemize}
+    	\item $[5] = +1 \frac{1}{2}$
+        \item $[3, 4, 6] = +1$
+        \item $[2, 7] = +\frac{1}{2}$
+        \item $[8] = 0$
+        \item $[9] = -\frac{1}{2}$
+        \item $[10, J, Q, K] = -1$
+    \end{itemize}
+    
+	Human players who use this system often double each of the values to avoid the use of fractions. Similar to the previous two strategies, the higher counts indicate a higher likelihood of being dealt high cards and therefore, a higher chance of winning. \newline
+    
+    \textbf{2.5 Implementation} \newline 
+    
+    We’ve implemented all of these algorithms as a pass-through interface for our game module. Much like in real life, the card-counting part of the algorithm is separated in computation and interface from the game-playing part of the algorithm. This also dictates our feature transformation strategy, which we’ll discuss later. \newline 
+    
+	Another important decision to note is the use of the \textit{true count}. This is a slight modification of the original card-counting strategies above. For each strategy, we take the running count as calculated above and divide it by the number of decks. This is a common modification that has been shown to give more accurate results because variations in the count are much more meaningful when there are fewer cards left in the deck. Processing the deck count like this is a better strategy as it involves less learning. It is also appealing because this is as close to the experience of the card-counting blackjack player. \newline 
+    
+    {\large \textbf{3 Baseline, Basic Strategy, and Oracle}} \newline
+    
+    To see just how large the growth potential was for our learning algorithms, we implemented a baseline (the worst possible player) and an oracle (the best possible player). Our baseline was the blackjack player who stands on every hand. This is the most simple strategy and involves no regard to the current state of the cards dealt. On the other hand, our oracle is omniscient. It is able to look at the dealer's hand and look at the deck and make a decision that optimizes the result of each hand - essentially the perfect blackjack player, if he or she was a superhero that could see through cards. We didn't implement basic strategy, however, this is simply the strategy that chooses the action with the highest probability given the player total, the dealer's face-up card, and an essential card-count of zero. We referred to the expected value of basic strategy as a metric for the improvement of our learning algorithms. \newline 
+    
+    {\large \textbf{4 Evaluation Metric}} \newline 
+    
+    We have a natural evaluation metric on the space of blackjack playing algorithms: expected value. Every blackjack game has well-documented expected values using certain systems of play. We will estimate our expected values through Monte Carlo approximation, by locking down a fully-trained policy and playing a lot of hands of blackjack to find an average return. We can then compare this performance to that of our oracle and baseline. \newline 
+    
+    {\large \textbf{5 Markov Decision Process}} \newline 
+    
+    \textbf{5.1 Model in Detail} \newline 
+    
+    Part of the appeal of this project is that this is a problem we ourselves have tried to solve with our minds, with mixed results. So it seems fair to us that we present each algorithm with the same information that a player would have in the situation. With this in mind, we built an interface in the class \texttt{RLPlayer} that gives the same interface to each learning algorithm. Each algorithm is passed arguments \texttt{(state, action, reward)} and return an action from the list of actions presented. \newline 
+    
+    In this way, the algorithms are trained in a blackjack-agnostic way, which makes the framework fit nicely with the principle discussed of clean separation between models and algorithms. Additionally, there is the practical software-engineering benefit of being able to easily swap algorithms as long as they stick to a clean interface. \newline 
+    
+    \textbf{5.2 Start State} \newline 
+    
+    Our start state is a quadruple with \texttt{(player's two cards, player total, dealer's face-up card, dealer total)}. \pagebreak 
+    
+    \textbf{5.3 States} \newline 
+    
+    The states actually passed into our learning algorithms are triples of \texttt{(count, player total, dealer total)}. \newline
+    
+    \textbf{5.4 Actions} \newline 
+    
+    We have a function called \texttt{getPossibleActions} which returns the actions that the player can take based on the number of cards in its hand. These came from the four options of \texttt{hit}, \texttt{stand}, \texttt{double down} and \texttt{surrender}. \newline 
+    
+    \textbf{5.5 Reward} \newline 
+    
+    We have a function called \texttt{getReward} which returns the reward of a game state. If the game isn't over or the player and dealer are tied, the reward is $0$. If the player has $21$ in its hand, then it receives a reward of $1.5$ (the typical Las Vegas reward for a ``blackjack'' hand). When the player wins otherwise, it receives a reward of $1$. When the player loses, the reward is $-1$. Finally, if the player surrenders, the reward is $-0.5$. \newline 
+    
+    \textbf{5.6 End State} \newline
+    
+    Finally, we have a function called \texttt{\_\_endHand\_\_} which gets called when the player's total exceeds $21$, when the player chooses to stand, or when it chooses to surrender. This function then plays out the dealer's hand using the required strategy of a Las Vegas dealer. If the total is less than $17$, the dealer is required to hit. This is part of the reason that we thought reinforcement learning would be successful - the dealer strategy is consistent and not modified with the count. \newline 
+    
+    {\large \textbf{6 Reinforcement Learning}} \newline
+    
+    \textbf{6.1 Value Approximation} \newline 
+    
+    In training an artificially-intelligent system to play blackjack and count cards, there are $19$ hand values$* 13$ dealer cards$* 5$ actions $= 1235$ state-action pairs in the space for standard blackjack without card counting. Though by no means a small state space, we believe that standard reinforcement strategies like Value Iteration could achieve good performance on the game, though we didn't use it because, although the transition probabilities could be worked out analytically or through MC simulation, that would be an unrealistic way for an agent to learn blackjack and we'd like to simulate as closely as possible the human nature of the game. \newline 
+
+	When card counting is introduced, the state space of the game blows up. For simple systems like Hi-Lo, there are approximately $25$ counts that need to be accounted for, so we have $1235 * 25 = 30,875$ state-action pairs. For the Wong Halves system, there are non-integral counts and more cards affect the count, so the state space is quadrupled to around $100,000$ state-action pairs. Finally, for the remaining cards system, the deck is modeled as a set of counts of remaining cards that would be of size $1235 * (4 * $\texttt{numDecks}$)^{13}$, which scales exponentially with the number of decks and gets to a place where Python’s log function screams loudly we try to put it in a comfortable form. So, since we don't have the enormous computing power of Google, we are going to try a method that doesn’t require exabytes of memory for the values of all these states. Here we transition from the search world to that of machine learning and function approximation. \newline 
+    
+    \textbf{6.2 Feature Mapping} \newline 
+
+	We chose to represent our data via a second-order feature mapping $\phi(x)$ with $42$ dimensions: 
+    
+    \begin{center}\begin{tabular}{|c|c|} 
+    	\hline Dimension & Content \\
+        \hline $1$ & Card Count \\
+        \hline $2$ & Player Total \\
+        \hline $3-30$ & Player Total (one-hot) \\ 
+        \hline $31$ & Dealer Total \\ 
+        \hline $32-42$ & Dealer Total (one-hot) \\
+        \hline
+    \end{tabular}\end{center}
+    
+    We felt that this was an appropriate feature mapping given that we are trying to minimize features as much as possible and that only five dimensions will be used at any given time. \newline 
+    
+    \textbf{6.3 Linear Q-Learning} \newline 
+    
+    We can approximate the Q-function on states in a policy-free manner using a linear approximation and develop a policy using our feature mapping. We followed the standard Q-learning update: $\textbf{w} \leftarrow \textbf{w} - \eta[Q_{\text{opt}}(s, a, \textbf{w}) - (r + \gamma V_{\text{opt}}(s'))]\phi(s, a)$. This method was similar to the blackjack assignment, so we won't go into too much depth. We experimented with different learning rates, discount rates and exploration probabilities and results will be outlined later on. \newline 
+    
+    \textbf{6.4 Policy Gradients (PG)} \newline 
+    
+    One modern method for using function approximation techniques is explored in Andrej Karpathy's blog post. We have implemented a policy-gradient based approach to learning to count cards. The approach is as follows: Use a neural net with a logistic non-linearity to express a stochastic policy that is then followed to explore the space. After a batch of trial runs, compute the gradients of the actions based on the reward function for the policy used and update the parameters of the net to reflect the improvement in the playing techniques. Repeatedly iterate this batched training until convergence. This algorithm takes a long time to train, but also is close to the state-of-the art-in reinforcement learning, according to Karpathy. \newline
+    
+    \textbf{6.5 Deep Q-Learning with Neural Nets (DQN)} \newline
+    
+    We have also implemented a function-approximating policy-free Q-learning model with neural nets. We used the Python tensor flow package to build a net of four fully-connected layers with the following number of nodes in each layer: 40, 30, 20, 6. This algorithm uses an ReLU non-linearity and the Adam optimizer equation to update each iteration. Similarly to policy gradients, we have found this algorithm slow to train. \newline 
+    
+    {\large \textbf{7 Results}} \newline
+    
+    {\large \textbf{8 Future Work}} \newline
+    
+    While it's clear that some methods have performed with a policy that is better than basic strategy and a net positive return, there is still much room for improvement. 
+    
+    {\large \textbf{9 References}} \newline
+
+\end{document}
