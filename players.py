@@ -187,15 +187,15 @@ class RLPlayer(Player):
     def __init__(self, strat, algo):
         super(RLPlayer, self).__init__('RL')
         self.count = 0.0
-        self.algo = QLearning(self.game) # we want the algo to take (state, pssible actions, reward) and return an action \in actions
+        self.algo = QLearning(self.game, 'pgn') # we want the algo to take (state, pssible actions, reward) and return an action \in actions
         if strat == 'Hi-Lo':
-            self.strat = self.hilo 
+            self.strat = self.hilo
         elif strat == 'Omega II':
             self.strat = self.omega
         elif strat == 'Wong Halves':
             self.strat = self.wonghalf
         else:
-            self.strat = None    
+            self.strat = None
         self.numAces = self.game.deck.getNumDecks() * 4# not always used
         '''here, self.strat is a utility function that returns the current count'''
 
@@ -221,11 +221,12 @@ class RLPlayer(Player):
             #actions = ['big', 'small']
             #betlevel = self.algo.getAction(state, actions, 0)
             bet = 1 #if betlevel == 'small' else 10
-            playerHand, playerTotal, dealerHand, dealerTotal = self.game.startHand(bet)
+            playerHand, playerTotal, dealerHand, turd = self.game.startHand(bet)
+            dealerTotal = self.game.cardValues[dealerHand[0]]
             newCards =  playerHand + dealerHand
             countState = self.strat(newCards)
             state = (countState, playerTotal, dealerTotal)
-            while state != None:
+            while state != None and not self.game.isOver:
                 actions = self.game.getPossibleActions()
                 newCards = []
                 newState = None
@@ -243,7 +244,6 @@ class RLPlayer(Player):
         print winnings
         time.sleep(2)
 
-        
         winnings = 0.0
         total_reward = 0.0
         for iter in xrange(numiter):
@@ -263,7 +263,8 @@ class RLPlayer(Player):
             #actions = ['big', 'small']
             #betlevel = self.algo.getAction(state, actions, 0)
             bet = 1 #if betlevel == 'small' else 10
-            playerHand, playerTotal, dealerHand, dealerTotal = self.game.startHand(bet)
+            playerHand, playerTotal, dealerHand, turd = self.game.startHand(bet)
+            dealerTotal = self.game.cardValues[dealerHand[0]]
             newCards =  playerHand + dealerHand
             countState = self.strat(newCards)
             state = (countState, playerTotal, dealerTotal)

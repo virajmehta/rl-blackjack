@@ -17,8 +17,11 @@ def getStrategy():
         strategy = raw_input('What counting strategy should RL use? (Hi-Lo, Omega II, Wong Halves) ')
         if strategy in strategies: return strategy
 
-def main():   
-    while True:
+def main():
+    player = RLPlayer('Hi-Lo', 'Q-Learning')
+    player.train(1000000)
+
+    '''while True:
         playerName = raw_input('What type of player do you want? (Baseline, Oracle, RL) ')
         if playerName in players:
             player = None
@@ -31,6 +34,6 @@ def main():
             else:
                 player = RLPlayer(getStrategy(), getAlgorithm())
                 player.train(1000000)
-            break
+            break'''
 
 if __name__ == '__main__': main()
