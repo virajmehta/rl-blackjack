@@ -77,7 +77,7 @@
 
     We’ve implemented all of these algorithms as a pass-through interface for our game module. Much like in real life, the card-counting part of the algorithm is separated in computation and interface from the game-playing part of the algorithm. This also dictates our feature transformation strategy, which we’ll discuss later. \newline
 
-	Another important decision to note is the use of the \textit{true count}. This is a slight modification of the original card-counting strategies above. For each strategy, we take the running count as calculated above and divide it by the number of decks. This is a common modification that has been shown to give more accurate results because variations in the count are much more meaningful when there are fewer cards left in the deck. Processing the deck count like this is a better strategy as it involves less learning. It is also appealing because this is as close to the experience of the card-counting blackjack player. \newline 
+	Another important decision to note is the use of the \textit{true count}. This is a slight modification of the original card-counting strategies above. For each strategy, we take the running count as calculated above and divide it by the number of decks. This is a common modification that has been shown to give more accurate results because variations in the count are much more meaningful when there are fewer cards left in the deck. Processing the deck count like this is a better strategy as it involves less learning. It is also appealing because this is as close to the experience of the card-counting blackjack player. \newline
 
     {\large \textbf{3 Baseline, Basic Strategy, and Oracle}} \newline
 
@@ -105,7 +105,7 @@
 
     \textbf{5.4 Actions} \newline
 
-    We have a function called \texttt{getPossibleActions} which returns the actions that the player can take based on the number of cards in its hand. These came from the four options of \texttt{hit}, \texttt{stand}, \texttt{double down} and \texttt{surrender}. \newline 
+    We have a function called \texttt{getPossibleActions} which returns the actions that the player can take based on the number of cards in its hand. These came from the four options of \texttt{hit}, \texttt{stand}, \texttt{double down} and \texttt{surrender}. \newline
 
    \textbf{5.5 Reward} \newline
 
@@ -145,11 +145,22 @@
 
     \textbf{6.4 Policy Gradients (PG)} \newline
 
-    One modern method for using function approximation techniques is explored in Andrej Karpathy's blog post. We have implemented a policy-gradient based approach to learning to count cards. The approach is as follows: Use a neural net with a logistic non-linearity to express a stochastic policy that is then followed to explore the space. After a batch of trial runs, compute the gradients of the actions based on the reward function for the policy used and update the parameters of the net to reflect the improvement in the playing techniques. Repeatedly iterate this batched training until convergence. This algorithm takes a long time to train, but also is close to the state-of-the art-in reinforcement learning, according to Karpathy. \newline
+    One modern method for using function approximation techniques is explored in Andrej Karpathy's blog post. We have implemented a policy-gradient based approach to learning to count cards. The approach is as follows: Use a neural net with a hyperbolic tange non-linearity to express a stochastic policy that is then followed to explore the space. After a batch of trial runs, compute the gradients of the actions based on the reward function for the policy used and update the parameters of the net to reflect the improvement in the playing techniques. Repeatedly iterate this batched training until convergence. This algorithm takes a long time to train, but also is close to the state-of-the art-in reinforcement learning, according to Karpathy. \newline
+
+    For this problem, we thought an ANN would give the best results since there is no convolutional structure to the inputs (ruling out CNNs) and no time-series structure to the inputs (ruling out RNN, LSTM, etc.) So, we decided on an ANN with one hidden layer of 500 neurons. The reasoning behind a wide but not deep net for policy gradients was two-fold: First, we wanted a contrast with the deeper approach in the following section. Second, we reasoned that there's not a lot of higher-order reasoning in blackjack, especially with the state space represented as a one-hot vector, so composed features would not be nearly as useful as a large variety of learned features.\newline
+
+    To be entirely explicit on inputs and outputs, the PG Network outputs a softmaxed vector of normalized probabilities which is then sampled from to determine the stochastic policy. This stochastic approach obviated the need for an $\epsilon$-greedy policy that is typical of Q-Learning. The 'gradients' we input as a score are actually a maximum likelihood estimate of the quantity \[\sum_{i \in \text{Batch}}R_i\log p\left(x_i|y_i\right).\]
+
+    We thought it would be illustrative here to discuss the difficulties we encountered in this approach and how we mitigated some of them. First, neither of us had any practical exprerience building neural nets or using TensorFlow, so there was quite a learning curve. Second, we had some issues with gradients vanishing due to the one-hot encoding of the vector and a simple ReLU activation function. So, we swapped it out for the tanh in order to have stronger gradients.\newline
+
+    In optimization, we noticed that the problem suffered a lot from the nonconvex nature of neural networks. We noticed that the eventual performance at convergence of the network varied significantly between runs. This is a fundamental difficulty of these techniques and suggests that the cost function for blackjack is very `lumpy'. We chose the network with the best performance of these.
 
     \textbf{6.5 Deep Q-Learning with Neural Nets (DQN)} \newline
 
-    We have also implemented a function-approximating policy-free Q-learning model with neural nets. We used the Python tensor flow package to build a net of four fully-connected layers with the following number of nodes in each layer: 40, 30, 20, 6. This algorithm uses an ReLU non-linearity and the Adam optimizer equation to update each iteration. Similarly to policy gradients, we have found this algorithm slow to train. \newline
+    We have also implemented a function-approximating policy-free Q-learning model with neural nets. We used the Python TensorFlow package to build an ANN with three hidden layers of 100 nodes each and an ReLU activation function. For similar reasoning as above, we used an ANN, but for the sake of variety made this one deeper with about the same number of parameters. In this situation, ReLU worked just fine, so we continued with it.\newline
+
+    We used squared loss as part of the standard Q-learning update: \[\text{Loss} = \sum_{i \in \text{Batch}}\left(\hat Q(s, \hat a) - \left(R + \gamma \hat Q(s')\right)\right)^2.\]\newline
+    In optimization, we noticed that this Q-function was less `lumpy' in training and responded well to a higher learning rate. Presumably there are less local minima in this space or the local minima are at similar levels of performance.
 
     {\large \textbf{7 Results}} \newline
 
