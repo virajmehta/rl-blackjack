@@ -268,11 +268,11 @@ class PGNetwork():
             os.chmod(self.path, 0777)
             os.makedirs(self.path)
         self.weights = {
-            'wfc1': tf.Variable(tf.random_normal([42, 100])),
-            'wfc2': tf.Variable(tf.random_normal([100, 6]))
+            'wfc1': tf.Variable(tf.random_normal([42, 500])),
+            'wfc2': tf.Variable(tf.random_normal([500, 6]))
         }
         self.biases = {
-            'bfc1': tf.Variable(tf.random_normal([100])),
+            'bfc1': tf.Variable(tf.random_normal([500])),
             'bfc2': tf.Variable(tf.random_normal([6]))
         }
         self.phi = tf.placeholder(tf.float32, shape=[None, 42])
